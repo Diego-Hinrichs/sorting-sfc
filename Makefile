@@ -5,7 +5,6 @@ LDFLAGS = -lglfw -lGL -lGLU -lglut -ldl -lX11 -pthread
 SRC = main.cpp utils.cpp
 OBJ = $(SRC:.cpp=.o)
 TARGET = main
-
 # Default target
 all: $(TARGET)
 
@@ -20,9 +19,5 @@ $(TARGET): $(OBJ)
 # Clean up
 clean:
 	rm -f $(OBJ) $(TARGET)
-
-# Run the simulation
-run: $(TARGET)
-	./$(TARGET) $(CONFIG_FILE)
 
 .PHONY: all clean run

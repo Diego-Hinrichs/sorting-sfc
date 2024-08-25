@@ -4,8 +4,11 @@
 #include <stdint.h>
 #include <algorithm>
 #include <math.h>
+#include <random>
 
 const float G = 1.0f;
+
+typedef uint32_t coord_t;
 
 struct Body {
     float x, y; // Position
@@ -47,9 +50,9 @@ bool compareZOrder(Body a, Body b);
 void sortBodiesZOrder(Body *bodies, int n);
 
 // HILBERT
-uint32_t interleave(uint32_t x);
-uint32_t hilbertXYZToIndex(uint32_t x, uint32_t y);
-unsigned int calculateHilbertIndex(const Body &body);
-void sortBodiesHilbert(Body *bodies, int n);
+void AxestoTranspose2D(coord_t* X, int b);
+bool compareHilbertOrder(const Body& a, const Body& b, int bits);
+void sortBodiesHilbert(Body* bodies, unsigned long n, int bits);
 
+void initBodies(Body *bodies, int numBodies, unsigned int seed);
 #endif

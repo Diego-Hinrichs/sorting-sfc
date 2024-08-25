@@ -29,8 +29,8 @@ bool compareZOrder(Body a, Body b) {
 void sortBodiesZOrder(Body *bodies, int n) {
     std::sort(bodies, bodies + n, compareZOrder);
 }
-// HILBERT
 
+/* // HILBERT
 uint32_t interleave(uint32_t x){
     x = (x | (x << 16)) & 0x030000FF;
     x = (x | (x << 8)) & 0x0300F00F;
@@ -65,4 +65,65 @@ bool compareHilbertOrder(Body a, Body b) {
 // Function to sort bodies using Hilbert index
 void sortBodiesHilbert(Body *bodies, int n) {
     std::sort(bodies, bodies + n, compareHilbertOrder);
+} */
+
+void AxestoTranspose2D(coord_t* X, int b) {
+    coord_t M = 1 << (b - 1), P, Q, t;
+
+    for (Q = M; Q > 1; Q >>= 1) {
+        P = Q - 1;
+        for (int i = 0; i < 2; i++) {
+            if (X[i] & Q)
+                X[0] ^= P;
+            else {
+                t = (X[0] ^ X[i]) & P;
+                X[0] ^= t;
+                X[i] ^= t;
+            }
+        }
+    }
+
+    for (int i = 1; i < 2; i++)
+        X[i] ^= X[i - 1];
+    t = 0;
+    for (Q = M; Q > 1; Q >>= 1)
+        if (X[1] & Q)
+            t ^= Q - 1;
+    for (int i = 0; i < 2; i++)
+        X[i] ^= t;
 }
+
+bool compareHilbertOrder(const Body& a, const Body& b, int bits) {
+    coord_t x1 = static_cast<coord_t>((a.x + 1.0f) * (1 << (bits - 1)));
+    coord_t y1 = static_cast<coord_t>((a.y + 1.0f) * (1 << (bits - 1)));
+    coord_t x2 = static_cast<coord_t>((b.x + 1.0f) * (1 << (bits - 1)));
+    coord_t y2 = static_cast<coord_t>((b.y + 1.0f) * (1 << (bits - 1)));
+
+    coord_t X1[] = {x1, y1};
+    coord_t X2[] = {x2, y2};
+
+    AxestoTranspose2D(X1, bits);
+    AxestoTranspose2D(X2, bits);
+
+    return std::lexicographical_compare(X1, X1 + 2, X2, X2 + 2);
+}
+
+void sortBodiesHilbert(Body* bodies, unsigned long n, int bits) {
+    std::sort(bodies, bodies + n, [bits](const Body& a, const Body& b) {
+        return compareHilbertOrder(a, b, bits);
+    });
+}
+
+void initBodies(Body *bodies, int numBodies, unsigned int seed) {
+    std::default_random_engine generator(seed);
+    std::uniform_real_distribution<float> distribution(-10.0, 10.0);
+    std::uniform_real_distribution<float> massDistribution(1.0, 10.0);
+
+    for(int i = 0; i < numBodies; i++){
+        bodies[i].x = distribution(generator);
+        bodies[i].y = distribution(generator);
+        bodies[i].vx = distribution(generator);
+        bodies[i].vy = distribution(generator);
+        bodies[i].mass = massDistribution(generator);
+    }
+};
