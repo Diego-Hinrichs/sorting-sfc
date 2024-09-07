@@ -18,7 +18,7 @@ void processInput(GLFWwindow *window);
 void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 // N-Body Barnes-Hut
-const float THETA = 0.5; // Apertura
+const float THETA = 0.0; // Apertura
 Body *bodies;
 
 struct Quad {
