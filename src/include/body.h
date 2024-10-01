@@ -1,18 +1,18 @@
-#ifndef INDEX_H
-#define INDEX_H
+#ifndef BODY_H
+#define BODY_H
 
-#include <stdint.h>
-#include <algorithm>
 #include <math.h>
 #include <random>
-
-const float G = 1.0f;
+#include <algorithm> // std::sort morton.cpp y hilbert.cpp
 
 typedef uint32_t coord_t;
 
+// no deberia estar aqui
+const float G = 1.0f;
+
 struct Body {
-    float x, y; // Position
-    float vx, vy; // Velocity
+    float x, y;     // Position
+    float vx, vy;   // Velocity
     float fx, fy;   // fuerza acumulada
     float mass;
     
@@ -21,7 +21,7 @@ struct Body {
     Body(float x, float y, float vx, float vy, float fx, float fy, float mass)
         : x(x), y(y), vx(vx), vy(vy), fx(fx), fy(fy), mass(mass) {}
 
-    
+    // TODO: Esto es para Barnes-Hut, ver donde dejar para le fuerza bruta
     void resetForce() {
         fx = 0;
         fy = 0;
@@ -44,15 +44,4 @@ struct Body {
     }
 };
 
-// ZORDER
-unsigned int calculateZOrderIndex(const Body &body);
-bool compareZOrder(Body a, Body b);
-void sortBodiesZOrder(Body *bodies, int n);
-
-// HILBERT
-void AxestoTranspose2D(coord_t* X, int b);
-bool compareHilbertOrder(const Body& a, const Body& b, int bits);
-void sortBodiesHilbert(Body* bodies, unsigned long n, int bits);
-
-void initBodies(Body *bodies, int numBodies, unsigned int seed);
 #endif
