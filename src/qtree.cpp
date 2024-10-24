@@ -8,15 +8,6 @@ bool Quad::contains( const Body &body) const{
     return (body.x >= left && body.x <= right && body.y <= top && body.y >= bottom);
 };
 
-bool Quad::intersects(const Quad &range) const {
-    return (
-        x - w / 2 <= range.x + range.w / 2 &&
-        x + w / 2 >= range.x - range.w / 2 &&
-        y - h / 2 <= range.y + range.h / 2 &&
-        y + h / 2 >= range.y - range.h / 2
-    );
-}
-
 void QuadTree::clear() {
     for (int i = 0; i < size; ++i) {
         //bodies[i] = Body(); // Reiniciar el elemento usando el constructor predeterminado
@@ -39,7 +30,6 @@ void QuadTree::subdivide() {
     isDivided = true;
 }
 
-// TODO: Refactorizar, parametros innecesarios: body = bodies[index]
 // TODO: se pasa bodies ahora porque es arreglo global dentro del scope main
 void QuadTree::insert(Body &body, int index, Body *bodies) {
     if (!boundary.contains(body)) return;
@@ -73,15 +63,10 @@ void QuadTree::insert(Body &body, int index, Body *bodies) {
     clear();
 
     // Insertar el nuevo cuerpo
-    if (topLeft->boundary.contains(body)) {
-        topLeft->insert(body, index, bodies);
-    } else if (topRight->boundary.contains(body)) {
-        topRight->insert(body, index, bodies);
-    } else if (bottomLeft->boundary.contains(body)) {
-        bottomLeft->insert(body, index, bodies);
-    } else if (bottomRight->boundary.contains(body)) {
-        bottomRight->insert(body, index, bodies);
-    }
+    if (topLeft->boundary.contains(body)) topLeft->insert(body, index, bodies);
+    else if (topRight->boundary.contains(body)) topRight->insert(body, index, bodies);
+    else if (bottomLeft->boundary.contains(body)) bottomLeft->insert(body, index, bodies);
+    else if (bottomRight->boundary.contains(body)) bottomRight->insert(body, index, bodies);
     updateCenterOfMass(body);
 }
 

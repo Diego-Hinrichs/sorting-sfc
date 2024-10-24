@@ -8,12 +8,11 @@ struct Quad {
 
     Quad(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {};
     bool contains(const Body &body) const;
-    bool intersects(const Quad &range) const;
 };
 
 struct QuadTree {
     int capacity;
-    int size = 0;
+    int size = 0; // Cantidad de elementos en el cuadrante
     
     float mass = 0;             // Total mass in this QuadTree node
     float comX = 0, comY = 0;   // Center of mass
