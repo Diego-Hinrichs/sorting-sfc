@@ -1,140 +1,224 @@
 #include <iostream>
-#include <ctime>
+#include <cstdlib>
+#include <omp.h>
 #include <chrono>
-#include <string.h>
-#include "morton.h"
-#include "hilbert.h"
-#include "qtree.h"
+#include <math.h>
+#include "window.hpp"
+#include "qtree.hpp"
+#include "nbody.hpp"
 
-using namespace std::chrono;
+Point* points;
+Window* mainWindow;
 
-// N-Body Barnes-Hut
-const float THETA = 0.0; // Apertura
-Body *bodies;
+float half = 500; // mitad de tamano incial cuadrante -> 1000 de extremo a extremo
+float THETA = 0.4f;
 
-void initBodies(Body *bodies, int numBodies, unsigned int seed) {
-    std::default_random_engine generator(seed);
-    std::uniform_real_distribution<float> distribution(-10.0, 10.0);
-    std::uniform_real_distribution<float> massDistribution(1.0, 10.0);
+float G = 0.0009f;
+float delta_time = 0.036f;
+int max_capacity = 16;
+float softening_factor = 0.000009;
+int n;
 
-    for(int i = 0; i < numBodies; i++){
-        bodies[i].x = distribution(generator);
-        bodies[i].y = distribution(generator);
-        bodies[i].vx = distribution(generator);
-        bodies[i].vy = distribution(generator);
-        bodies[i].mass = massDistribution(generator);
-    }
-};
+// window
+const int WIDTH = 800;
+const int HEIGHT = 800;
+GLuint VAO, VBO;
 
-void updateForce(Body *bodies, int n, float G = 1.0f, float dt = 0.016f, float softeningFactor = 1e-10f, float velocityDamping = 1.0f) {    
-    #pragma omp parallel for
+void initialize_points(Point* points, int n) {
     for (int i = 0; i < n; ++i) {
-        
-        float fx = 0.0f;
-        float fy = 0.0f;
-
-        for (int j = 0; j < n; ++j) {
-            if (i == j) continue;
-
-            float dx = bodies[j].x - bodies[i].x;
-            float dy = bodies[j].y - bodies[i].y;
-
-            float distSq = dx*dx + dy*dy;
-            distSq += softeningFactor;
-            float distSq3 = distSq * distSq;
-
-            float dist = sqrt(distSq3);
-            float invDist = 1.0f / dist;
-
-            float F = G * bodies[j].mass * invDist;
- 
-            // A = F / m_i
-            fx += F * dx;
-            fy += F * dy; 
-        }
-        // V = A * dt
-        bodies[i].vx += fx * dt * velocityDamping;
-        bodies[i].vy += fy * dt * velocityDamping;
-    }
-    
-}
-
-void updatePosition(Body *bodies, int n, float dt) {
-    // X = V * dt
-    #pragma omp parallel for
-    for(int i = 0; i < n; ++i){
-        bodies[i].x += bodies[i].vx * dt;
-        bodies[i].y += bodies[i].vy * dt; 
+        float x = static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f;
+        float y = static_cast<float>(rand()) / RAND_MAX * 20.0f - 10.0f;
+        float z = 0.0f;
+        float mass = 1.0f;
+        points[i] = Point(x, y, z, mass);
     }
 }
 
-QuadTree *quadTree;
+void setupVAOandVBO() {
+    // Generar VAO y VBO
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
 
-// ver como recorrer el arbol y los vecinos
-void simulateBH(float dt, int numBodies){
-    for(int i = 0; i < numBodies; ++i){
-        bodies[i].resetForce();
-    }
-    // Esta ordenando en este paso
-    for(int i = 0; i < numBodies; ++i){
-        quadTree->computeForce(bodies[i], THETA, bodies);
-    }
-    
-    for(int i = 0; i < numBodies; ++i){
-        bodies[i].update(dt);
-    }
+    // Configurar VAO
+    glBindVertexArray(VAO);
+
+    // Configurar VBO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, n * sizeof(float) * 2, nullptr, GL_DYNAMIC_DRAW);
+
+    // Configurar los atributos de vértice
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    // Desvincular VAO y VBO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: %s <n> <alg [0|1]> <order [0|1|2]> <seed>\n", argv[0]);
+void updateVBO() {
+    float* vertices = new float[n * 2];
+    for (int i = 0; i < n; ++i) {
+        vertices[i * 2 + 0] = points[i].x;
+        vertices[i * 2 + 1] = points[i].y;
+        // TODO: ADD Z same in initialize_points
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, n * sizeof(float) * 2, vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    delete[] vertices;
+}
+
+void drawPoints() {
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_POINTS, 0, n);
+    glBindVertexArray(0);
+}
+
+void update_point(Point& p, float fx, float fy, float deltaTime) {
+    float ax = fx / p.mass;
+    float ay = fy / p.mass;
+
+    p.vx += ax * deltaTime;
+    p.vy += ay * deltaTime;
+
+    p.x += p.vx * deltaTime;
+    p.y += p.vy * deltaTime;
+}
+
+int main(int argc, char** argv) {
+    if (argc != 4) {
+        std::cerr << "Uso: " << argv[0] << " (numero de puntos) (numero de pasos de tiempo) (alg)" << std::endl;
+        std::cout << "alg = 1: Fuerza Bruta" << std::endl;
+        std::cout << "alg = 2: Barnes Hut" << std::endl; 
+        std::cout << "alg = 3: Modo DEBUG entre ambos" << std::endl; 
         return 1;
     }
 
-    int numBodies = atoi(argv[1]);
-    unsigned int alg = atoi(argv[2]);
-    unsigned int order = atoi(argv[3]);
-    unsigned int seed = atoi(argv[4]);
+    n = std::atoi(argv[1]);
+    int k = std::atoi(argv[2]);
+    int alg = std::atoi(argv[3]);
+
+    NBody* nbody;
+    QuadTree* quadTree;
+
+    if (alg == 1) { 
+        points = (Point*)malloc(n * sizeof(Point));
+        initialize_points(points, n);
     
-    bodies = (Body*)malloc(numBodies * sizeof(Body));
-    initBodies(bodies, numBodies, seed);
-    // Ordenar los cuerpos y los índices según Morton o Hilbert
-    if (order == 1) {
-        sortBodiesZOrder(bodies, numBodies);
-    } else if (order == 2) {
-        sortBodiesHilbert(bodies, numBodies, 32);
-    }
+        // !! SETUP FB
+        nbody = new NBody(n, G, delta_time, softening_factor);
 
-    // si es barnes-hut
-    if (alg == 1) {
-        Quad boundary(0, 0, 3500, 3500);
-        quadTree = new QuadTree(boundary, 64);
+    } else if (alg == 2) { 
+        points = (Point*)malloc(n * sizeof(Point));
+        initialize_points(points, n);
 
-        for (int i = 0; i < numBodies; ++i) {
-            quadTree->insert(bodies[i], i, bodies);
+        // !! SETUP BH
+        Quad rootBoundary(0, 0, half, half);
+        quadTree = new QuadTree(rootBoundary, max_capacity);
+
+    } else if (alg > 2){
+        std::cout << "Modo DEBUG" << std::endl;
+        Point* fb = (Point*)malloc(n * sizeof(Point));
+        Point* bh = (Point*)malloc(n * sizeof(Point));
+
+        std::cout << "Generando puntos" << std::endl;
+        initialize_points(fb, n);
+        for(int i = 0; i < n; ++i){
+            bh[i] = fb[i];
         }
 
-        int step = 0;
-        while (step < 3000) {
-            simulateBH(0.016, numBodies);
-            delete quadTree;
-            quadTree = new QuadTree(boundary, 64);
+        std::cout << "Setup de FB y BH" << std::endl;
+        nbody = new NBody(n, G, delta_time, softening_factor);
+        Quad rootBoundary(0, 0, half, half);
+        quadTree = new QuadTree(rootBoundary, max_capacity);
 
-            for (int i = 0; i < numBodies; ++i) {
-                quadTree->insert(bodies[i], i, bodies);
+        std::cout << "Simulando" << std::endl;
+        int step = 0;
+        while(step < k){
+            // !! FUERZA BRUTA
+            nbody->simulateFB(fb);
+
+            // !! BARNES HUT
+            quadTree->clear();
+            for (int i = 0; i < n; ++i) {
+                quadTree->insert(bh, i);
             }
+
+            #pragma omp parallel for
+            for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+                float fx = 0.0f;
+                float fy = 0.0f;
+                quadTree->calculate_force(bh, i, fx, fy, softening_factor, THETA, G);
+                update_point(bh[i], fx, fy, delta_time); // sumatoria de velocidades
+            }
+
+            // TODO: Calcular errores para poder parametrizar
+
             step++;
-        }
-        delete quadTree;
-    } else if (alg == 0) {
-        int step = 0;
-        while (step < 3000) {
-            updateForce(bodies, numBodies, 1.0f, 0.016f);
-            updatePosition(bodies, numBodies, 0.016f);
-            step++;
-        }
-    
-    free(bodies);
-    return 0;
+        };
+        std::cout << "Simulacion terminada" << std::endl;
+        
+        delete[] points;
+        delete[] nbody;
+        delete[] quadTree;
+        return 0;
     }
+
+    // !! iniciar window, VAO y VBO
+    mainWindow = new Window(WIDTH, HEIGHT);
+    mainWindow->init(); 
+    setupVAOandVBO();
+    
+    // !! temporizador para desacoplar render y simulación
+    auto lastTime = std::chrono::high_resolution_clock::now();
+    int step = 0;
+    
+    // TODO: WHEN `ESC` OR `X` IS PRESSED (CORE DUMPED)
+    while (!mainWindow->getShouldClose()) {
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> elapsed = currentTime - lastTime;
+
+        // Actualizar la simulación cada cierto tiempo (cada 0.016s para ~60 FPS)
+        if (elapsed.count() > 0.016f) {
+            if (alg == 1) {
+                nbody->simulateFB(points);
+
+            } else if (alg == 2){
+                quadTree->clear();
+                for (int i = 0; i < n; ++i) {
+                    quadTree->insert(points, i); // !! insertar el índice del punto
+                }
+
+                #pragma omp parallel for
+                for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+                    float fx = 0.0f;
+                    float fy = 0.0f;
+                    quadTree->calculate_force(points, i, fx, fy, softening_factor, THETA, G);
+                    update_point(points[i], fx, fy, delta_time);
+                }
+            }
+            // !! Actualizar VBO con las nuevas posiciones
+            updateVBO();
+            step++;
+            lastTime = currentTime;
+        }
+
+        // Renderización con OpenGL
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        drawPoints();
+        mainWindow->swapBuffers();
+        glfwPollEvents();
+    }
+
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteBuffers(1, &VBO);
+
+    // BUG: Debe ser que intento borrar uno que no se inicializo, solo se declaro (?
+    delete[] points;
+    delete[] nbody;
+    delete[] quadTree;
+    return 0;
 }

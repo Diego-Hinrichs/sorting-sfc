@@ -21,7 +21,6 @@ struct Body {
     Body(float x, float y, float vx, float vy, float fx, float fy, float mass)
         : x(x), y(y), vx(vx), vy(vy), fx(fx), fy(fy), mass(mass) {}
 
-    // TODO: Esto es para Barnes-Hut, ver donde dejar para le fuerza bruta
     void resetForce() {
         fx = 0;
         fy = 0;
