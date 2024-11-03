@@ -73,7 +73,7 @@ int Window::init()
     glViewport(0, 0, bufferWidth, bufferHeight);
     
     // TODO: CHANGE THIS
-    glOrtho(-10, 10, -10, 10, -10, 10); // Ajustar la escala para visualizar todos los puntos
+    glOrtho(-1, 1, -1, 1, -1, 1); // Ajustar la escala para visualizar todos los puntos
     glfwSetWindowUserPointer(mainWindow, this);
 
     return 0; // Agregar retorno cuando todo sea exitoso

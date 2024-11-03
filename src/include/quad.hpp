@@ -4,10 +4,10 @@
 
 struct Quad {
 public:
-    float x, y;
-    float half_width, half_height;
+    double x, y;
+    double half_width, half_height;
 
-    Quad(float x, float y, float half_width, float half_height);
+    Quad(double x, double y, double half_width, double half_height);
     bool contains(Point& p);
     Quad get_sub_quad(int quadrant);
 };

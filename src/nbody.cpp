@@ -1,32 +1,32 @@
 #include <cmath>
 #include "nbody.hpp"
 
-NBody::NBody(int n, float G, float dt, float softening_factor)
+NBody::NBody(int n, double G, double dt, double softening_factor)
     : n(n), G(G), dt(dt), softening_factor(softening_factor) {}
 
 void NBody::updateForce(Point *points){
 #pragma omp parallel for
     for (int i = 0; i < n; ++i)
     {
-        float fx = 0.0f;
-        float fy = 0.0f;
+        double fx = 0.0f;
+        double fy = 0.0f;
 
         for (int j = 0; j < n; ++j)
         {
             if (i == j)
                 continue;
 
-            float dx = points[j].x - points[i].x;
-            float dy = points[j].y - points[i].y;
+            double dx = points[j].x - points[i].x;
+            double dy = points[j].y - points[i].y;
 
-            float distSq = dx * dx + dy * dy;
+            double distSq = dx * dx + dy * dy;
             distSq += softening_factor * softening_factor;
-            float distSq3 = distSq * distSq;
+            double distSq3 = distSq * distSq;
 
-            float dist = sqrt(distSq3);
-            float invDist = 1.0f / dist;
+            double dist = sqrt(distSq3);
+            double invDist = 1.0f / dist;
 
-            float F = G * points[j].mass * invDist;
+            double F = G * points[j].mass * invDist;
 
             // A = F / m_i
             fx += F * dx;

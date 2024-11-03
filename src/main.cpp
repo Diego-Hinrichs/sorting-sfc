@@ -15,14 +15,14 @@ Point* points;
 int dimension = 2;
 
 // Barnes-Hut params
-float THETA = 0.4f;
-float half = 500; // mitad de tamano incial cuadrante -> 1000 de extremo a extremo
-int max_capacity = 64;
+double THETA = 0.4f;
+double half = 500; // mitad de tamano incial cuadrante -> 1000 de extremo a extremo
+int max_capacity = 16;
 
 // NBody params
-float G = 0.0009f;
-float delta_time = 0.036f;
-float softening_factor = 0.000009;
+double G = 9e-4f;
+double delta_time = 16e-3f;
+double softening_factor = 1e-10f;
 int n;
 
 // window
@@ -94,13 +94,24 @@ int main(int argc, char** argv) {
                     quadTree->insert(points, i); // !! insertar el índice del punto
                 }
 
+                // FIXME: BUG
                 #pragma omp parallel for
                 for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
-                    float fx = 0.0f;
-                    float fy = 0.0f;
-                    quadTree->calculate_force(points, i, fx, fy, softening_factor, THETA, G);
-                    quadTree->update_point(points[i], fx, fy, delta_time);
+                    points[i].fx = 0.0f;
+                    points[i].fy = 0.0f;
+                    quadTree->calculate_force(points, i, points[i].fx, points[i].fy, softening_factor, THETA, G);
                 }
+
+                #pragma omp parallel for
+                for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+                    quadTree->update_point(points[i], points[i].fx, points[i].fy, delta_time);
+                }
+
+                #pragma omp parallel for
+                for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+                    points[i].reset_points_force();
+                }
+                
             }
             step++;
             lastTime = currentTime;
@@ -124,22 +135,18 @@ int main(int argc, char** argv) {
 }
 
 bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
-    std::cout << "Modo DEBUG" << std::endl;
     Point* fb = (Point*)malloc(n * sizeof(Point));
     Point* bh = (Point*)malloc(n * sizeof(Point));
 
-    std::cout << "Generando puntos" << std::endl;
     initialize_points(fb, n);
     for(int i = 0; i < n; ++i) {
         bh[i] = fb[i];
     }
 
-    std::cout << "Setup de FB y BH" << std::endl;
     nbody = new NBody(n, G, delta_time, softening_factor);
     Quad rootBoundary(0, 0, half, half);
     quadTree = new QuadTree(rootBoundary, max_capacity);
 
-    std::cout << "Simulando" << std::endl;
     int step = 0;
     while(step < k) {
         // !! FUERZA BRUTA
@@ -152,11 +159,20 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         }
 
         #pragma omp parallel for
-        for (int i = 0; i < n; ++i) {
-            float fx = 0.0f;
-            float fy = 0.0f;
-            quadTree->calculate_force(bh, i, fx, fy, softening_factor, THETA, G);
-            quadTree->update_point(bh[i], fx, fy, delta_time);
+        for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+            bh[i].fx = 0.0f;
+            bh[i].fy = 0.0f;
+            quadTree->calculate_force(bh, i, bh[i].fx, bh[i].fy, softening_factor, THETA, G);
+        }
+        
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+            quadTree->update_point(bh[i], bh[i].fx, bh[i].fy, delta_time);
+        }
+
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
+            bh[i].reset_points_force();
         }
 
         // Calcular errores cada X pasos
@@ -164,17 +180,17 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
             double total_error = 0.0;
             #pragma omp parallel for reduction(+:total_error)
             for (int i = 0; i < n; ++i) {
-                float dx = fb[i].x - bh[i].x;
-                float dy = fb[i].y - bh[i].y;
+                double dx = fb[i].x - bh[i].x;
+                double dy = fb[i].y - bh[i].y;
                 double distance_error = sqrt(dx * dx + dy * dy);
                 total_error += distance_error;
             }
             double mean_error = total_error / n;
 
-            std::cout << "Paso " << step << ": Error medio de posiciones (MAE) = " << mean_error << std::endl;
+            // std::cout << "Paso " << step << ": Error medio de posiciones (MAE) = " << mean_error << std::endl;
 
             if (mean_error > EPSILON) {
-                std::cout << "Advertencia: El error en el paso " << step << " excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
+                std::cout << "Advertencia: El error (" << mean_error << ") en el paso" << step << " excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
             }
         }
 

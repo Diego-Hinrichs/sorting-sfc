@@ -58,7 +58,7 @@ void QuadTreeNode::subdivide(Point* points) {
     num_stored_points_ = 0;  // no points
 }
 
-void QuadTreeNode::calculate_force_node(Point* points, int point_index, float& fx, float& fy, float softening_factor, float THETA, float G) {
+void QuadTreeNode::calculate_force_node(Point* points, int point_index, double& fx, double& fy, double softening_factor, double THETA, double G) {
     Point& p = points[point_index]; // point entering the quadrant
     
     // no point in the quad
@@ -72,7 +72,7 @@ void QuadTreeNode::calculate_force_node(Point* points, int point_index, float& f
 
     // if (exists another point in the node and its not the same) or (the quad is divided and (s / d < theta))
     if ((num_stored_points_ == 1 && point_indices_[0] != point_index) || (divided_ && (boundary_.half_width / dist) < THETA)) {
-        float force = (G * p.mass * total_mass_) / (dist * dist);
+        float force = (G * total_mass_) / (dist * dist);
         fx += force * (dx / dist);
         fy += force * (dy / dist);
     } else if (divided_) { // recursively for every child node

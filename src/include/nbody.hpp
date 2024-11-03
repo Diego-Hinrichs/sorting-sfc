@@ -4,7 +4,7 @@
 
 struct NBody{
 public:   
-    NBody(int n, float G, float dt, float softening_factor);
+    NBody(int n, double G, double dt, double softening_factor);
     void updateForce(Point *points);
     void updatePosition(Point *points);
     void simulateFB(Point *points);
@@ -12,9 +12,9 @@ public:
 
 private:
     int n;
-    float G;
-    float dt;
-    float softening_factor;
+    double G;
+    double dt;
+    double softening_factor;
 };
 
 #endif

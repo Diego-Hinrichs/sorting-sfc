@@ -22,17 +22,14 @@ public:
         root->insert(points, point_index);
     }
 
-    void calculate_force(Point* points, int point_index, float& fx, float& fy, float softening_factor, float THETA, float G) {
+    void calculate_force(Point* points, int point_index, double& fx, double& fy, double softening_factor, double THETA, double G) {
         root->calculate_force_node(points, point_index, fx, fy, softening_factor, THETA, G);
     }
     
     // TODO: modificar para 3D
-    void update_point(Point& p, float fx, float fy, float deltaTime) {
-        float ax = fx / p.mass;
-        float ay = fy / p.mass;
-
-        p.vx += ax * deltaTime;
-        p.vy += ay * deltaTime;
+    void update_point(Point& p, double fx, double fy, double deltaTime) {
+        p.vx += p.fx * deltaTime;
+        p.vy += p.fy * deltaTime;
 
         p.x += p.vx * deltaTime;
         p.y += p.vy * deltaTime;

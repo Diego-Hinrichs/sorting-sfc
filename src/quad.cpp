@@ -1,6 +1,6 @@
 #include "quad.hpp"
 
-Quad::Quad(float x, float y, float half_width, float half_height)
+Quad::Quad(double x, double y, double half_width, double half_height)
     : x(x), y(y), half_width(half_width), half_height(half_height) {}
 
 bool Quad::contains(Point& p) {
