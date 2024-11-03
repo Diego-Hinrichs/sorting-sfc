@@ -15,12 +15,12 @@ Point* points;
 int dimension = 2;
 
 // Barnes-Hut params
-double THETA = 0.4f;
-double half = 500; // mitad de tamano incial cuadrante -> 1000 de extremo a extremo
-int max_capacity = 16;
+double THETA = 0.1;
+double half = 1; // mitad de tamano incial cuadrante -> 1000 de extremo a extremo
+int max_capacity = 1;
 
 // NBody params
-double G = 9e-4f;
+double G = 9e-6f;
 double delta_time = 16e-3f;
 double softening_factor = 1e-10f;
 int n;
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
                 #pragma omp parallel for
                 for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
-                    quadTree->update_point(points[i], points[i].fx, points[i].fy, delta_time);
+                    quadTree->update_point(points[i], delta_time);
                 }
 
                 #pragma omp parallel for
@@ -167,7 +167,7 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         
         #pragma omp parallel for
         for (int i = 0; i < n; ++i) { // !! calcular fuerzas y actualizar puntos
-            quadTree->update_point(bh[i], bh[i].fx, bh[i].fy, delta_time);
+            quadTree->update_point(bh[i], delta_time);
         }
 
         #pragma omp parallel for
@@ -190,7 +190,7 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
             // std::cout << "Paso " << step << ": Error medio de posiciones (MAE) = " << mean_error << std::endl;
 
             if (mean_error > EPSILON) {
-                std::cout << "Advertencia: El error (" << mean_error << ") en el paso" << step << " excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
+                std::cout << "Advertencia: El error (" << mean_error << ") en el paso [" << step << "] excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
             }
         }
 

@@ -19,18 +19,15 @@ void NBody::updateForce(Point *points){
             double dx = points[j].x - points[i].x;
             double dy = points[j].y - points[i].y;
 
-            double distSq = dx * dx + dy * dy;
-            distSq += softening_factor * softening_factor;
-            double distSq3 = distSq * distSq;
+            double dist_square = dx * dx + dy * dy + softening_factor;
+            double dist_square_cube = dist_square * dist_square * dist_square;
+            double dist = sqrt(dist_square_cube);
 
-            double dist = sqrt(distSq3);
-            double invDist = 1.0f / dist;
-
-            double F = G * points[j].mass * invDist;
+            double F = G * points[j].mass / dist;
 
             // A = F / m_i
-            fx += F * dx;
-            fy += F * dy;
+            fx += F * dx / dist;
+            fy += F * dy / dist;
         }
         // V = A * dt
         points[i].vx += fx * dt;

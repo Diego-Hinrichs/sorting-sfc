@@ -68,13 +68,17 @@ void QuadTreeNode::calculate_force_node(Point* points, int point_index, double& 
 
     float dx = center_x_ - p.x;
     float dy = center_y_ - p.y;
-    float dist = std::sqrt(dx * dx + dy * dy + softening_factor); // 1e-5f softening factor
+
+    double dist_square = dx * dx + dy * dy + softening_factor;
+    double dist_square3 = dist_square * dist_square * dist_square;
+    double dist = sqrt(dist_square3);
 
     // if (exists another point in the node and its not the same) or (the quad is divided and (s / d < theta))
     if ((num_stored_points_ == 1 && point_indices_[0] != point_index) || (divided_ && (boundary_.half_width / dist) < THETA)) {
-        float force = (G * total_mass_) / (dist * dist);
-        fx += force * (dx / dist);
-        fy += force * (dy / dist);
+        float F = G * total_mass_ / dist;
+        fx += F * dx / dist;
+        fy += F * dy / dist;
+
     } else if (divided_) { // recursively for every child node
         for (int i = 0; i < 4; ++i) {
             if (children_[i]) {

@@ -27,7 +27,7 @@ public:
     }
     
     // TODO: modificar para 3D
-    void update_point(Point& p, double fx, double fy, double deltaTime) {
+    void update_point(Point& p, double deltaTime) {
         p.vx += p.fx * deltaTime;
         p.vy += p.fy * deltaTime;
 
