@@ -58,7 +58,9 @@
         "variant": "cpp",
         "stop_token": "cpp",
         "thread": "cpp",
-        "semaphore": "cpp"
+        "semaphore": "cpp",
+        "cstring": "cpp",
+        "fstream": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled"
 }

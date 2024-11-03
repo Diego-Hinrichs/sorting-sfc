@@ -1,7 +1,7 @@
 #ifndef POINT_H
 #define POINT_H
 
-class Point {
+struct Point {
 public:
     float x, y, z;     // Posición
     float vx, vy, vz;  // Velocidad

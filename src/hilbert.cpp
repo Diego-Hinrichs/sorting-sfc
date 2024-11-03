@@ -1,4 +1,4 @@
-#include "hilbert.h"
+#include "hilbert.hpp"
 
 /* // HILBERT
 uint32_t interleave(uint32_t x){

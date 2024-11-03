@@ -1,4 +1,4 @@
-#include "morton.h"
+#include "morton.hpp"
 
 // Function to calculate Z-order index for a 3D point
 unsigned int calculateZOrderIndex(const Body &body) {

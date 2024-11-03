@@ -12,6 +12,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     quad.cpp
     window.cpp
     nbody.cpp
+    mesh.cpp
 )
 
 # GLFW
@@ -26,7 +27,17 @@ FetchContent_Declare(
     GIT_SHALLOW    ON
 )
 
-FetchContent_MakeAvailable(glfw)
+# glm
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        0af55ccecd98d4e5a8d1fad7de25ba429d60e863 # 1.0.1
+    GIT_SHALLOW    ON
+    FIND_PACKAGE_ARGS
+)
+
+
+FetchContent_MakeAvailable(glfw glm)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -35,6 +46,7 @@ find_package(OpenMP REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC
     OpenGL::GL
     GLEW
+    glm
     glfw
     OpenMP::OpenMP_CXX
 )

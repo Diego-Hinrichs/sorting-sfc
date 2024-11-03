@@ -7,7 +7,7 @@
 
 typedef uint32_t coord_t;
 
-// no deberia estar aqui
+// FIXME: Refactorizar esto
 const float G = 1.0f;
 
 struct Body {
