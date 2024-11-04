@@ -1,7 +1,9 @@
 #include "qtnode.hpp"
 #include "point.hpp"
 #include <cmath> // sqrt
+#include <iostream>
 
+// constuctor
 QuadTreeNode::QuadTreeNode(Quad boundary, int capacity)
     : boundary_(boundary), capacity_(capacity), num_stored_points_(0), divided_(false), total_mass_(0), center_x_(0), center_y_(0) {
     point_indices_ = new int[capacity_];
@@ -17,12 +19,14 @@ bool QuadTreeNode::insert(Point* points, int point_index) {
         return false;
     }
 
-    // if the node has capacity then store the idx of the point. update the mass of the quad and the center of mass
+    // if the node has capacity then store the idx of the point. 
+    // pdate the mass of the quad and the center of mass
     if (num_stored_points_ < capacity_ && !divided_) {
-        point_indices_[num_stored_points_++] = point_index;
-        total_mass_ += p.mass;
-        center_x_ = (center_x_ * (total_mass_ - p.mass) + p.x * p.mass) / total_mass_;
-        center_y_ = (center_y_ * (total_mass_ - p.mass) + p.y * p.mass) / total_mass_;
+        point_indices_[num_stored_points_++] = point_index; // store the indice
+        double new_mass = total_mass_ + p.mass;
+        center_x_ = (center_x_ * total_mass_ + p.x * p.mass) / new_mass;
+        center_y_ = (center_y_ * total_mass_ + p.y * p.mass) / new_mass;
+        total_mass_ = new_mass;
         return true;
     }
 
@@ -38,7 +42,7 @@ bool QuadTreeNode::insert(Point* points, int point_index) {
         }
     }
 
-    return false;  // this should not
+    return false; 
 }
 
 void QuadTreeNode::subdivide(Point* points) {
@@ -56,33 +60,54 @@ void QuadTreeNode::subdivide(Point* points) {
         }
     }
     num_stored_points_ = 0;  // no points
+    total_mass_ = 0.0;
+    center_x_ = boundary_.half_width;
+    center_y_ = boundary_.half_height;
 }
 
-void QuadTreeNode::calculate_force_node(Point* points, int point_index, double& fx, double& fy, double softening_factor, double THETA, double G) {
-    Point& p = points[point_index]; // point entering the quadrant
+void QuadTreeNode::calculate_force_node(Point* points, int point_index, double softening_factor, double THETA, double G) {
+    Point& p = points[point_index];
     
-    // no point in the quad
+    // punto == nodo
     if (num_stored_points_ == 0 && !divided_) {
         return;
     }
 
-    float dx = center_x_ - p.x;
-    float dy = center_y_ - p.y;
+    double s = boundary_.half_width;
+    double dx = center_x_ - p.x;
+    double dy = center_y_ - p.y;
+    double dist_sq = dx * dx + dy * dy + softening_factor;
+    double dist = sqrt(dist_sq);
+    double inv_dist = 1.0 / dist;
+    
+    // FIXME: Esta utilizando el indice `i` que viene desde for loop, deberia utilizar el indice del arbol
+    if (num_stored_points_ == 1 && point_indices_[0] != point_index) {
+        /*1. If the current node is an external node (and it is not body b), 
+        calculate the force exerted by the current node on b, and add this amount to b’s net force.*/
+        for(int i = 0; i < num_stored_points_; ++i){
+            Point& _point = points[point_indices_[i]];
+            double _dx = _point.x - p.x;
+            double _dy = _point.y - p.y;
+            double _dist_sq = _dx * _dx + _dy * _dy + softening_factor;
+            double _dist = sqrt(_dist_sq);
+            double _inv_dist = 1.0 / _dist;
+            double F = G * _point.mass * _inv_dist * _inv_dist;
+            p.fx += F * _dx;
+            p.fy += F * _dy;
+        }
+    // nodo interno
+    } else if ((s / dist) < THETA) {
+        /*2. Otherwise, calculate the ratio s/d. If s/d < θ, treat this internal node as a single body, 
+        and calculate the force it exerts on body b, and add this amount to b’s net force. */
+        double F = G * total_mass_ * inv_dist * inv_dist;
+        p.fx += F * dx;
+        p.fy += F * dy;
 
-    double dist_square = dx * dx + dy * dy + softening_factor;
-    double dist_square3 = dist_square * dist_square * dist_square;
-    double dist = sqrt(dist_square3);
-
-    // if (exists another point in the node and its not the same) or (the quad is divided and (s / d < theta))
-    if ((num_stored_points_ == 1 && point_indices_[0] != point_index) || (divided_ && (boundary_.half_width / dist) < THETA)) {
-        float F = G * total_mass_ / dist;
-        fx += F * dx / dist;
-        fy += F * dy / dist;
-
-    } else if (divided_) { // recursively for every child node
+    } else if (divided_) {
+        /*3. Otherwise, run the procedure recursively on each of the current node’s children. */
         for (int i = 0; i < 4; ++i) {
             if (children_[i]) {
-                children_[i]->calculate_force_node(points, point_index, fx, fy, softening_factor, THETA, G);
+                children_[i]->calculate_force_node(points, point_index, softening_factor, THETA, G);
             }
         }
     }

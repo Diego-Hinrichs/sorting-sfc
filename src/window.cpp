@@ -1,9 +1,10 @@
 #include "window.hpp"
 
 Window::Window()
-{
+{   
 	width = 800;
 	height = 600;
+
     // camera fix 
     xChange = 0.0f;
     yChange = 0.0f;
@@ -28,7 +29,7 @@ Window::Window(GLint windowWidth, GLint windowHeight)
     }
 };
 
-int Window::init()
+int Window::init(const char* title)
 {
     if (!glfwInit())
     {
@@ -41,8 +42,7 @@ int Window::init()
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);  // Versión mayor de OpenGL
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);  // Versión menor de OpenGL
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // Usar el perfil core de OpenGL
-
-    mainWindow = glfwCreateWindow(width, height, "NBody simulation", NULL, NULL);
+    mainWindow = glfwCreateWindow(width, height, title, NULL, NULL);
     if (!mainWindow)
     {
         printf("Error creating GLFW window!");

@@ -18,21 +18,47 @@ public:
         delete root;
     }
 
-    void insert(Point* points, int point_index) {
-        root->insert(points, point_index);
+    void insert(Point* points, int n) {
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i) {
+            root->insert(points, i);
+        }
     }
 
-    void calculate_force(Point* points, int point_index, double& fx, double& fy, double softening_factor, double THETA, double G) {
-        root->calculate_force_node(points, point_index, fx, fy, softening_factor, THETA, G);
+    void calculate_force(Point* points, int n, double softening_factor, double THETA, double G) {
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i) {
+            root->calculate_force_node(points, i, softening_factor, THETA, G);
+        }
     }
     
-    // TODO: modificar para 3D
-    void update_point(Point& p, double deltaTime) {
-        p.vx += p.fx * deltaTime;
-        p.vy += p.fy * deltaTime;
+    // TODO: modificar para 3D. Declarar en qtnode.hpp y mover a qtnode.cpp
+    void update_velocity(Point* points, int n, double deltaTime) {
+        // !! Mover a POINT
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i){
+            points[i].vx += points[i].fx * deltaTime;
+            points[i].vy += points[i].fy * deltaTime;
+        }
+    }
 
-        p.x += p.vx * deltaTime;
-        p.y += p.vy * deltaTime;
+    void update_position(Point* points, int n, double deltaTime) {
+        // !! Mover a POINT
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i){
+            points[i].x += points[i].vx * deltaTime;
+            points[i].y += points[i].vy * deltaTime;
+        }
+    }
+
+    void reset_forces(Point* points, int n) {
+        // !! Mover a POINT
+        #pragma omp parallel for
+        for (int i = 0; i < n; ++i){
+            points[i].fx = 0.0;
+            points[i].fy = 0.0;
+            points[i].fz = 0.0;
+        }
     }
 
     void clear() {

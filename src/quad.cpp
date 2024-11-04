@@ -9,8 +9,8 @@ bool Quad::contains(Point& p) {
 };
 
 Quad Quad::get_sub_quad(int quadrant) {
-    float newHalfWidth = half_width / 2.0f;
-    float newHalfHeight = half_height / 2.0f;
+    double newHalfWidth = half_width / 2.0;
+    double newHalfHeight = half_height / 2.0;
 
     switch (quadrant) {
         case 0: return Quad(x - newHalfWidth, y - newHalfHeight, newHalfWidth, newHalfHeight); // NW
