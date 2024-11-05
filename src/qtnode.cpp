@@ -19,10 +19,12 @@ bool QuadTreeNode::insert(Point* points, int point_index) {
         return false;
     }
 
-    // if the node has capacity then store the idx of the point. 
-    // pdate the mass of the quad and the center of mass
+    // if the node has capacity then save the idx of the point. 
+    // update the mass of the quad and the center of mass
+    // if capacity == 1 then the point is the only one in the node
+    // and the mass is the mass of the point, same thing with the center_x_y of mass p.x_y
     if (num_stored_points_ < capacity_ && !divided_) {
-        point_indices_[num_stored_points_++] = point_index; // store the indice
+        point_indices_[num_stored_points_++] = point_index; // save the indice
         double new_mass = total_mass_ + p.mass;
         center_x_ = (center_x_ * total_mass_ + p.x * p.mass) / new_mass;
         center_y_ = (center_y_ * total_mass_ + p.y * p.mass) / new_mass;
@@ -80,7 +82,6 @@ void QuadTreeNode::calculate_force_node(Point* points, int point_index, double s
     double dist = sqrt(dist_sq);
     double inv_dist = 1.0 / dist;
     
-    // FIXME: Esta utilizando el indice `i` que viene desde for loop, deberia utilizar el indice del arbol
     if (num_stored_points_ == 1 && point_indices_[0] != point_index) {
         /*1. If the current node is an external node (and it is not body b), 
         calculate the force exerted by the current node on b, and add this amount to b’s net force.*/

@@ -16,8 +16,8 @@ int dimension = 2;
 unsigned int seed = 12345;
 
 // Barnes-Hut params
-double THETA = 0.0;
-double half = 1.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
+double THETA = 1.0e-7;
+double half = 10.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
 int max_capacity = 1;
 
 // NBody params
@@ -34,6 +34,7 @@ const char* title;
 
 void initialize_points(Point* points, int n, unsigned int seed);
 bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x);
+void print_arrays(Point* fb, Point* bh, int n);
 
 int main(int argc, char** argv) {
     if (argc != 4) {
@@ -50,13 +51,14 @@ int main(int argc, char** argv) {
 
     NBody* nbody;
     QuadTree* quadTree;
+    Quad rootBoundary(0, 0, half, half);
 
     if (alg == 1) { 
         points = (Point*)malloc(n * sizeof(Point));
         initialize_points(points, n, seed);
     
         // !! SETUP FB
-        nbody = new NBody(n, G, delta_time, softening_factor);
+        nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
         title = "Brute-Force Simulation";
 
     } else if (alg == 2) { 
@@ -64,7 +66,6 @@ int main(int argc, char** argv) {
         initialize_points(points, n, seed);
 
         // !! SETUP BH
-        Quad rootBoundary(0, 0, half, half);
         quadTree = new QuadTree(rootBoundary, max_capacity);
         title = "Barnes-Hut Simulation";
 
@@ -129,8 +130,8 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         bh[i] = fb[i];
     }
 
-    nbody = new NBody(n, G, delta_time, softening_factor);
     Quad rootBoundary(0, 0, half, half);
+    nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
     quadTree = new QuadTree(rootBoundary, max_capacity);
 
     int step = 0;
@@ -147,39 +148,41 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         quadTree->reset_forces(bh, n);
 
         // !! calcular errores cadax pasos
-        if (step % x == 0) {
-            // double total_error = 0.0;
-            // #pragma omp parallel for reduction(+:total_error)
-            // for (int i = 0; i < n; ++i) {
-            //     double dx = fb[i].x - bh[i].x;
-            //     double dy = fb[i].y - bh[i].y;
-            //     double distance_error = sqrt(dx * dx + dy * dy);
-            //     total_error += distance_error;
-            // }
-            // double mean_error = total_error / n;
+        // if (step % x == 0) {
+        //     double total_error = 0.0;
+        //     #pragma omp parallel for reduction(+:total_error)
+        //     for (int i = 0; i < n; ++i) {
+        //         double dx = fb[i].x - bh[i].x;
+        //         double dy = fb[i].y - bh[i].y;
+        //         double distance_error = sqrt(dx * dx + dy * dy);
+        //         total_error += distance_error;
+        //     }
+        //     double mean_error = total_error / n;
 
-            // if (mean_error > EPSILON) {
-            //     std::cout << "Advertencia: El error promedio (" << mean_error << ") en el paso [" << step << "] excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
-            // }
+        //     if (mean_error > EPSILON) {
+        //         std::cout << "Advertencia: El error promedio (" << mean_error << ") en el paso [" << step << "] excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
+        //     }
 
-            printf("Step: %i\n", step);
-            for (int i = 0; i < 10; ++i) {
-                printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
-                printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
-            }
-        }
+        //     printf("Step: %i\n", step);
+        //     for (int i = 0; i < n; ++i) {
+        //         printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
+        //         printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
+        //     }
+        // }
 
         step++;
     };
     
-    std::cout << "Simulacion terminada.\n" << std::endl;
-    printf("Step: %i. Points: %i.\n", step, n);
-    std::cout << "Posiciones finales:\n" << std::endl;
-    for (int i = 0; i < 10; ++i) {
-        printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
-        printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
-    }
+    // std::cout << "Simulacion terminada.\n" << std::endl;
+    // printf("Step: %i. Points: %i.\n", step, n);
+    // std::cout << "Posiciones finales:\n" << std::endl;
+    // for (int i = 0; i < 100; ++i) {
+    //     printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
+    //     printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
+    // }
     
+    print_arrays(fb, bh, n);
+
     free(fb);
     free(bh);
     delete nbody;
@@ -199,3 +202,41 @@ void initialize_points(Point* points, int n, unsigned int seed) {
         points[i] = Point(x, y, z, mass);
     }
 };
+
+void print_arrays(Point* fb, Point* bh, int n) {
+    if (n < 100) {
+        std::cout << "fb_data = [";
+        for (int i = 0; i < n; ++i) {
+            if (i % 3 == 0) {
+                std::cout << "\n\t";
+            }
+            printf("(%f, %f), ", fb[i].x, fb[i].y);
+        }
+        std::cout << "\n]" << std::endl;
+        std::cout << "\nbh_data = [";
+        for (int i = 0; i < n; ++i) {
+            if (i % 3 == 0) {
+                std::cout << "\n\t";
+            }
+            printf("(%f, %f), ", bh[i].x, bh[i].y);
+        }
+        std::cout << "\n]\n" << std::endl;
+    } else {
+        std::cout << "fb_data = [";
+        for (int i = 0; i < 100; ++i) {
+            if (i % 3 == 0) {
+                std::cout << "\n\t";
+            }
+            printf("(%f, %f), ", fb[i].x, fb[i].y);
+        }
+        std::cout << "\n]" << std::endl;
+        std::cout << "\nbh_data = [";
+        for (int i = 0; i < 100; ++i) {
+            if (i % 3 == 0) {
+                std::cout << "\n\t";
+            }
+            printf("(%f, %f), ", bh[i].x, bh[i].y);
+        }
+        std::cout << "\n]\n" << std::endl;
+    }
+}

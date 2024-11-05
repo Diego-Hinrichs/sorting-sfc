@@ -1,19 +1,23 @@
 #include <cmath>
 #include "nbody.hpp"
 
-NBody::NBody(int n, double G, double dt, double softening_factor)
-    : n(n), G(G), dt(dt), softening_factor(softening_factor) {}
+NBody::NBody(int n, double G, double dt, double softening_factor, Quad boundary)
+    : n(n), G(G), dt(dt), softening_factor(softening_factor), boundary_(boundary) {}
 
 void NBody::updateForce(Point *points){
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (int i = 0; i < n; ++i)
     {
+        if (!boundary_.contains(points[i])) {
+            continue;
+        }
+
         double fx = 0.0;
         double fy = 0.0;
 
         for (int j = 0; j < n; ++j)
         {
-            if (i == j)
+            if (i == j || !boundary_.contains(points[j])) // Verificar si los puntos están dentro del Quad
                 continue;
 
             double dx = points[j].x - points[i].x;
@@ -38,10 +42,12 @@ void NBody::updateForce(Point *points){
 }
 
 void NBody::updatePosition(Point *points){
-#pragma omp parallel for
+    // #pragma omp parallel for
     for (int i = 0; i < n; ++i){
-        points[i].x += points[i].vx * dt;
-        points[i].y += points[i].vy * dt;
+        if (boundary_.contains(points[i])) {
+            points[i].x += points[i].vx * dt;
+            points[i].y += points[i].vy * dt;
+        }
     }
 }
 
