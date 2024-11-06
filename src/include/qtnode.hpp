@@ -18,6 +18,7 @@ private:
     int num_stored_points_;
     int* point_indices_;
     bool divided_;
+    bool is_external_ = false;
     double total_mass_;
     double center_x_, center_y_;
 };

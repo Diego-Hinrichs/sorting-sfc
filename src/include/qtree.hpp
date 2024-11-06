@@ -35,6 +35,7 @@ public:
     // TODO: modificar para 3D.
     void update_velocity(Point* points, int n, double deltaTime) {
         // !! Mover a POINT
+        // #pragma omp parallel for
         for (int i = 0; i < n; ++i){
             points[i].vx += points[i].fx * deltaTime;
             points[i].vy += points[i].fy * deltaTime;

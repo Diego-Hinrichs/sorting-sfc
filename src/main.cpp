@@ -16,8 +16,8 @@ int dimension = 2;
 unsigned int seed = 12345;
 
 // Barnes-Hut params
-double THETA = 1.0e-7;
-double half = 10.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
+double THETA = 0;
+double half = 2.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
 int max_capacity = 1;
 
 // NBody params
@@ -34,7 +34,7 @@ const char* title;
 
 void initialize_points(Point* points, int n, unsigned int seed);
 bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x);
-void print_arrays(Point* fb, Point* bh, int n);
+void print_arrays(Point* fb, Point* bh, int n, int k);
 
 int main(int argc, char** argv) {
     if (argc != 4) {
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
         // !! actualizar la simulación cada cierto tiempo (cada 0.016s para ~60 FPS)
         if (elapsed.count() > 0.016f) {
             if (alg == 1) {
-                nbody->simulateFB(points);
+                nbody->simulate_fb(points);
             } else if (alg == 2) {
                 quadTree->clear();
                 quadTree->insert(points, n);
@@ -136,8 +136,9 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
 
     int step = 0;
     while(step < k) {
+        // std::cout << "Step: [" << step << "]" << std::endl;
         // !! FUERZA BRUTA
-        nbody->simulateFB(fb);
+        nbody->simulate_fb(fb);
 
         // !! BARNES HUT
         quadTree->clear();
@@ -173,15 +174,15 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         step++;
     };
     
-    // std::cout << "Simulacion terminada.\n" << std::endl;
-    // printf("Step: %i. Points: %i.\n", step, n);
-    // std::cout << "Posiciones finales:\n" << std::endl;
-    // for (int i = 0; i < 100; ++i) {
-    //     printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
-    //     printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
-    // }
+    std::cout << "Simulacion terminada.\n" << std::endl;
+    printf("Step: %i. Points: %i.\n", step, n);
+    std::cout << "Posiciones finales:\n" << std::endl;
+    for (int i = 0; i < 100; ++i) {
+        printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
+        printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
+    }
     
-    print_arrays(fb, bh, n);
+    // print_arrays(fb, bh, n, k);
 
     free(fb);
     free(bh);
@@ -203,7 +204,8 @@ void initialize_points(Point* points, int n, unsigned int seed) {
     }
 };
 
-void print_arrays(Point* fb, Point* bh, int n) {
+// mejorar
+void print_arrays(Point* fb, Point* bh, int n, int k) {
     if (n < 100) {
         std::cout << "fb_data = [";
         for (int i = 0; i < n; ++i) {
@@ -221,6 +223,8 @@ void print_arrays(Point* fb, Point* bh, int n) {
             printf("(%f, %f), ", bh[i].x, bh[i].y);
         }
         std::cout << "\n]\n" << std::endl;
+        std::cout << "n = " << n << std::endl;
+        std::cout << "step = " << k << std::endl;
     } else {
         std::cout << "fb_data = [";
         for (int i = 0; i < 100; ++i) {
@@ -238,5 +242,7 @@ void print_arrays(Point* fb, Point* bh, int n) {
             printf("(%f, %f), ", bh[i].x, bh[i].y);
         }
         std::cout << "\n]\n" << std::endl;
+        std::cout << "n = " << n << std::endl;
+        std::cout << "step = " << k << std::endl;
     }
 }

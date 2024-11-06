@@ -50,6 +50,7 @@ bool QuadTreeNode::insert(Point* points, int point_index) {
 void QuadTreeNode::subdivide(Point* points) {
     for (int i = 0; i < 4; ++i) {
         children_[i] = new QuadTreeNode(boundary_.get_sub_quad(i), capacity_);
+        children_[i]->is_external_ = true;
     }
     divided_ = true;
 
@@ -75,6 +76,24 @@ void QuadTreeNode::calculate_force_node(Point* points, int point_index, double s
         return;
     }
 
+
+    
+    if (num_stored_points_ == 1 && point_indices_[0] != point_index) {
+        /*1. If the current node is an external node (and it is not body b), 
+        calculate the force exerted by the current node on b, and add this amount to b’s net force.*/
+        Point& _point = points[point_indices_[0]];
+        double _dx = _point.x - p.x;
+        double _dy = _point.y - p.y;
+        double _dist_sq = _dx * _dx + _dy * _dy + softening_factor;
+        double _dist = sqrt(_dist_sq);
+        double _inv_dist = 1.0 / _dist;
+        double F = G * _point.mass * _inv_dist * _inv_dist;
+        p.fx += F * _dx;
+        p.fy += F * _dy;
+
+    // nodo interno
+    } 
+    
     double s = boundary_.half_width;
     double dx = center_x_ - p.x;
     double dy = center_y_ - p.y;
@@ -82,24 +101,10 @@ void QuadTreeNode::calculate_force_node(Point* points, int point_index, double s
     double dist = sqrt(dist_sq);
     double inv_dist = 1.0 / dist;
     
-    if (num_stored_points_ == 1 && point_indices_[0] != point_index) {
-        /*1. If the current node is an external node (and it is not body b), 
-        calculate the force exerted by the current node on b, and add this amount to b’s net force.*/
-        for(int i = 0; i < num_stored_points_; ++i){
-            Point& _point = points[point_indices_[i]];
-            double _dx = _point.x - p.x;
-            double _dy = _point.y - p.y;
-            double _dist_sq = _dx * _dx + _dy * _dy + softening_factor;
-            double _dist = sqrt(_dist_sq);
-            double _inv_dist = 1.0 / _dist;
-            double F = G * _point.mass * _inv_dist * _inv_dist;
-            p.fx += F * _dx;
-            p.fy += F * _dy;
-        }
-    // nodo interno
-    } else if ((s / dist) < THETA) {
+    if ((s / dist) < THETA) {
         /*2. Otherwise, calculate the ratio s/d. If s/d < θ, treat this internal node as a single body, 
         and calculate the force it exerts on body b, and add this amount to b’s net force. */
+        // std::cout<< "(s/d): " << s / dist << std::endl;
         double F = G * total_mass_ * inv_dist * inv_dist;
         p.fx += F * dx;
         p.fy += F * dy;
