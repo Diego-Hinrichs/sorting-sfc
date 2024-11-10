@@ -7,10 +7,14 @@ class QuadTree {
 public:
     QuadTreeNode* root;
     int capacity;
+    int n;
+    double G;
+    double dt;
+    double softening_factor;
 
     QuadTree(){};
-    QuadTree(Quad boundary, int capacity)
-        : capacity(capacity) {
+    QuadTree(int n, double G, double delta_time, double softening_factor, int capacity, Quad boundary)
+        : capacity(capacity), n(n), G(G), dt(delta_time), softening_factor(softening_factor) {
         root = new QuadTreeNode(boundary, capacity);
     }
 
@@ -18,14 +22,14 @@ public:
         delete root;
     }
 
-    void insert(Point* points, int n) {
+    void insert(Point* points) {
         // #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
             root->insert(points, i);
         }
     }
 
-    void calculate_force(Point* points, int n, double softening_factor, double THETA, double G) {
+    void update_force(Point* points, double THETA) {
         // #pragma omp parallel for
         for (int i = 0; i < n; ++i) {
             root->calculate_force_node(points, i, softening_factor, THETA, G);
@@ -33,31 +37,24 @@ public:
     }
     
     // TODO: modificar para 3D.
-    void update_velocity(Point* points, int n, double deltaTime) {
-        // !! Mover a POINT
+    void update_velocity(Point* points) {
         // #pragma omp parallel for
         for (int i = 0; i < n; ++i){
-            points[i].vx += points[i].fx * deltaTime;
-            points[i].vy += points[i].fy * deltaTime;
+            points[i].update_velocity(dt);
         }
     }
 
-    void update_position(Point* points, int n, double deltaTime) {
-        // !! Mover a POINT
+    void update_position(Point* points) {
         // #pragma omp parallel for
         for (int i = 0; i < n; ++i){
-            points[i].x += points[i].vx * deltaTime;
-            points[i].y += points[i].vy * deltaTime;
+            points[i].update_position(dt);
         }
     }
 
-    void reset_forces(Point* points, int n) {
-        // !! Mover a POINT
+    void reset_forces(Point* points) {
         // #pragma omp parallel for
         for (int i = 0; i < n; ++i){
-            points[i].fx = 0.0;
-            points[i].fy = 0.0;
-            points[i].fz = 0.0;
+            points[i].reset_forces();
         }
     }
 

@@ -16,14 +16,14 @@ int dimension = 2;
 unsigned int seed = 12345;
 
 // Barnes-Hut params
-double THETA = 0;
-double half = 2.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
+double THETA = 0.0;
 int max_capacity = 1;
 
-// NBody params
-double G = 1e-6;
-double delta_time = 16e-2;
-double softening_factor = 1e-15;
+// System
+double G = 1e-5;
+double delta_time = 1e-3;
+double softening_factor = 1e-8;
+double half = 10.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
 int n;
 
 // window
@@ -33,8 +33,10 @@ const int HEIGHT = 800;
 const char* title;
 
 void initialize_points(Point* points, int n, unsigned int seed);
-bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x);
+bool debug_mode(int n, int k, int x);
 void print_arrays(Point* fb, Point* bh, int n, int k);
+void print_points(Point* fb, Point* bh, int n);
+void calculate_error(Point *fb, Point *bh, int n);
 
 int main(int argc, char** argv) {
     if (argc != 4) {
@@ -51,26 +53,22 @@ int main(int argc, char** argv) {
 
     NBody* nbody;
     QuadTree* quadTree;
-    Quad rootBoundary(0, 0, half, half);
+    Quad rootBoundary(0.0, 0.0, half, half);
 
     if (alg == 1) { 
         points = (Point*)malloc(n * sizeof(Point));
         initialize_points(points, n, seed);
-    
-        // !! SETUP FB
         nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
-        title = "Brute-Force Simulation";
+        title = "Brute Force Simulation";
 
     } else if (alg == 2) { 
         points = (Point*)malloc(n * sizeof(Point));
         initialize_points(points, n, seed);
-
-        // !! SETUP BH
-        quadTree = new QuadTree(rootBoundary, max_capacity);
+        quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundary);
         title = "Barnes-Hut Simulation";
 
     } else if (alg > 2) {
-        return debug_mode(nbody, quadTree, n, k, 100);
+        return debug_mode(n, k, 100);
     }
 
     // !! iniciar window, VAO y VBO
@@ -92,13 +90,13 @@ int main(int argc, char** argv) {
         if (elapsed.count() > 0.016f) {
             if (alg == 1) {
                 nbody->simulate_fb(points);
-            } else if (alg == 2) {
+            } else if (alg == 2) {                
                 quadTree->clear();
-                quadTree->insert(points, n);
-                quadTree->calculate_force(points, n, softening_factor, THETA, G);
-                quadTree->update_velocity(points, n, delta_time);
-                quadTree->update_position(points, n, delta_time);
-                quadTree->reset_forces(points, n);
+                quadTree->insert(points);
+                quadTree->update_force(points, THETA);
+                quadTree->update_velocity(points);
+                quadTree->update_position(points);
+                quadTree->reset_forces(points);
             }
             step++;
             lastTime = currentTime;
@@ -121,7 +119,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
+bool debug_mode(int n, int k, int x) {
     Point* fb = (Point*)malloc(n * sizeof(Point));
     Point* bh = (Point*)malloc(n * sizeof(Point));
 
@@ -130,71 +128,55 @@ bool debug_mode(NBody* nbody, QuadTree* quadTree, int n, int k, int x) {
         bh[i] = fb[i];
     }
 
-    Quad rootBoundary(0, 0, half, half);
-    nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
-    quadTree = new QuadTree(rootBoundary, max_capacity);
+    std::cout << "Simulacion iniciada.\n" << std::endl;
+    printf("Step: %i. Points: %i.\n", 0, n);
+    std::cout << "Posiciones inciales:\n" << std::endl;
+    print_points(fb, bh, 10);
 
+    Quad rootBoundary(0.0, 0.0, half, half);
+    NBody* nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
+    QuadTree* quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundary);
+    
+    // !! FUERZA BRUTA 
     int step = 0;
     while(step < k) {
         // std::cout << "Step: [" << step << "]" << std::endl;
-        // !! FUERZA BRUTA
         nbody->simulate_fb(fb);
-
-        // !! BARNES HUT
-        quadTree->clear();
-        quadTree->insert(bh, n);
-        quadTree->calculate_force(bh, n, softening_factor, THETA, G);
-        quadTree->update_velocity(bh, n, delta_time);
-        quadTree->update_position(bh, n, delta_time);
-        quadTree->reset_forces(bh, n);
-
-        // !! calcular errores cadax pasos
-        // if (step % x == 0) {
-        //     double total_error = 0.0;
-        //     #pragma omp parallel for reduction(+:total_error)
-        //     for (int i = 0; i < n; ++i) {
-        //         double dx = fb[i].x - bh[i].x;
-        //         double dy = fb[i].y - bh[i].y;
-        //         double distance_error = sqrt(dx * dx + dy * dy);
-        //         total_error += distance_error;
-        //     }
-        //     double mean_error = total_error / n;
-
-        //     if (mean_error > EPSILON) {
-        //         std::cout << "Advertencia: El error promedio (" << mean_error << ") en el paso [" << step << "] excede la tolerancia de EPSILON (" << EPSILON << ")" << std::endl;
-        //     }
-
-        //     printf("Step: %i\n", step);
-        //     for (int i = 0; i < n; ++i) {
-        //         printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
-        //         printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
-        //     }
-        // }
-
         step++;
     };
-    
+
+    // !! BARNES HUT
+    step = 0;
+    while(step < k) {
+        quadTree->clear();
+        quadTree->insert(bh);
+        quadTree->update_force(bh, THETA);
+        quadTree->update_velocity(bh);
+        quadTree->update_position(bh);
+        quadTree->reset_forces(bh);
+        step++;
+    }
+
     std::cout << "Simulacion terminada.\n" << std::endl;
     printf("Step: %i. Points: %i.\n", step, n);
     std::cout << "Posiciones finales:\n" << std::endl;
-    for (int i = 0; i < 100; ++i) {
-        printf("fb[%i] = (%10.7f, %10.7f)\t", i, fb[i].x, fb[i].y);
-        printf("bh[%i] = (%10.7f, %10.7f)\n", i, bh[i].x, bh[i].y);
-    }
+    print_points(fb, bh, 10);
+    std::cout << std::endl;
+
+    print_arrays(fb, bh, n, k);
     
-    // print_arrays(fb, bh, n, k);
+    calculate_error(fb, bh, n);
 
     free(fb);
     free(bh);
     delete nbody;
-    delete quadTree;
+    // delete quadTree;
     return true;
 }
 
 void initialize_points(Point* points, int n, unsigned int seed) {
     // Inicializar el generador de números aleatorios con la semilla
     srand(seed);
-
     for (int i = 0; i < n; ++i) {
         double x = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
         double y = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
@@ -204,45 +186,50 @@ void initialize_points(Point* points, int n, unsigned int seed) {
     }
 };
 
-// mejorar
+void print_points(Point* fb, Point* bh, int n) {
+    for (int i = 0; i < n; ++i) {
+        printf("fb[%i] = (%10.7lf, %10.7lf)\t", i, fb[i].x, fb[i].y);
+        printf("bh[%i] = (%10.7lf, %10.7lf)\n", i, bh[i].x, bh[i].y);
+    }
+}
+
 void print_arrays(Point* fb, Point* bh, int n, int k) {
-    if (n < 100) {
-        std::cout << "fb_data = [";
-        for (int i = 0; i < n; ++i) {
-            if (i % 3 == 0) {
-                std::cout << "\n\t";
-            }
-            printf("(%f, %f), ", fb[i].x, fb[i].y);
+    int m = n < 100 ? n : 100;
+    std::cout << "fb_data = [";
+    for (int i = 0; i < m; ++i) {
+        if (i % 3 == 0) {
+            std::cout << "\n\t";
         }
-        std::cout << "\n]" << std::endl;
-        std::cout << "\nbh_data = [";
-        for (int i = 0; i < n; ++i) {
-            if (i % 3 == 0) {
-                std::cout << "\n\t";
-            }
-            printf("(%f, %f), ", bh[i].x, bh[i].y);
+        printf("(%lf, %lf), ", fb[i].x, fb[i].y);
+    }
+    std::cout << "\n]" << std::endl;
+    std::cout << "\nbh_data = [";
+    for (int i = 0; i < m; ++i) {
+        if (i % 3 == 0) {
+            std::cout << "\n\t";
         }
-        std::cout << "\n]\n" << std::endl;
-        std::cout << "n = " << n << std::endl;
-        std::cout << "step = " << k << std::endl;
-    } else {
-        std::cout << "fb_data = [";
-        for (int i = 0; i < 100; ++i) {
-            if (i % 3 == 0) {
-                std::cout << "\n\t";
-            }
-            printf("(%f, %f), ", fb[i].x, fb[i].y);
-        }
-        std::cout << "\n]" << std::endl;
-        std::cout << "\nbh_data = [";
-        for (int i = 0; i < 100; ++i) {
-            if (i % 3 == 0) {
-                std::cout << "\n\t";
-            }
-            printf("(%f, %f), ", bh[i].x, bh[i].y);
-        }
-        std::cout << "\n]\n" << std::endl;
-        std::cout << "n = " << n << std::endl;
-        std::cout << "step = " << k << std::endl;
+        printf("(%lf, %lf), ", bh[i].x, bh[i].y);
+    }
+    std::cout << "\n]\n" << std::endl;
+    std::cout << "n = " << n << std::endl;
+    std::cout << "step = " << k << std::endl;
+}
+
+void calculate_error(Point *fb, Point *bh, int n) {
+    //  !! calcular errores cada x pasos
+    double total_error = 0.0;
+    #pragma omp parallel for reduction(+:total_error)
+    for (int i = 0; i < n; ++i) {
+        double dx = fb[i].x - bh[i].x;
+        double dy = fb[i].y - bh[i].y;
+        double distance_error = sqrt(dx * dx + dy * dy);
+        total_error += distance_error;
+    }
+    double mean_error = total_error / n;
+
+    if (mean_error > EPSILON) {
+        std::cout << "Error promedio (" << mean_error << "). Excede la tolerancia: (" << EPSILON << ")" << std::endl;
+    } else if (mean_error < EPSILON) {
+        std::cout << "Error promedio (" << mean_error << "). Tolerancia: (" << EPSILON << ")" << std::endl;
     }
 }

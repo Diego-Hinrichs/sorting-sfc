@@ -13,12 +13,11 @@ public:
 
 private:
     Quad boundary_;
-    QuadTreeNode* children_[4]; // TODO: std::unique_ptr
+    QuadTreeNode* children_[4];
     int capacity_;
     int num_stored_points_;
     int* point_indices_;
     bool divided_;
-    bool is_external_ = false;
     double total_mass_;
     double center_x_, center_y_;
 };

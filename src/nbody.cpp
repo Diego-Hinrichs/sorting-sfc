@@ -6,60 +6,45 @@ NBody::NBody(int n, double G, double dt, double softening_factor, Quad boundary)
 
 void NBody::update_force(Point *points){
     // #pragma omp parallel for
-    for (int i = 0; i < n; ++i)
-    {
-        if (!boundary_.contains(points[i])) {
-            continue;
-        }
-
-        for (int j = 0; j < n; ++j)
-        {
-            if (i == j || !boundary_.contains(points[j])) // Verificar si los puntos están dentro del Quad
+    for (int i = 0; i < n; ++i) {
+        // if (!boundary_.contains(points[i])) {
+        //     continue;
+        // }
+        for (int j = 0; j < n; ++j) {
+            if (i == j) // verificar si los puntos son iguales
+            // if (i == j || !boundary_.contains(points[j])) // verificar si los puntos están dentro del Quad
                 continue;
 
-            double dx = points[j].x - points[i].x;
-            double dy = points[j].y - points[i].y;
-            double dist_sq = dx * dx + dy * dy + softening_factor * softening_factor;
-            double dist = sqrt(dist_sq);
-            double inv_dist = 1.0 / dist;
-            double F = G * points[j].mass * inv_dist * inv_dist;
-
-            // A = F / m_i
-            points[i].fx += F * dx;
-            points[i].fy += F * dy;
+            points[i].add_force(points[j], softening_factor, G);
         }
+    }
+}
+
+void NBody::update_velocity(Point *points){
+    // #pragma omp parallel for
+    for (int i = 0; i < n; ++i){
+        points[i].update_velocity(dt);
     }
 }
 
 void NBody::update_position(Point *points){
     // #pragma omp parallel for
     for (int i = 0; i < n; ++i){
-        if (boundary_.contains(points[i])) {
-            points[i].x += points[i].vx * dt;
-            points[i].y += points[i].vy * dt;
-        }
-    }
-}
-void NBody::update_velocity(Point *points){
-    // #pragma omp parallel for
-    for (int i = 0; i < n; ++i){
-        points[i].vx += points[i].fx * dt;
-        points[i].vy += points[i].fy * dt;
+        points[i].update_position(dt);
     }
 }
 
 void  NBody::reset_forces(Point *points){
     // #pragma omp parallel for
     for (int i = 0; i < n; ++i){
-        points[i].fx = 0.0;
-        points[i].fy = 0.0;
+        points[i].reset_forces();
     }
 }
 
 void NBody::simulate_fb(Point *points){
     update_force(points);
-    update_position(points);
     update_velocity(points);
+    update_position(points);
     reset_forces(points);
 }
 
