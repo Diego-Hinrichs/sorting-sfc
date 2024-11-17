@@ -27,7 +27,7 @@ int max_capacity;
 double G = 1.0;
 double delta_time = 1e-4;
 double softening_factor = 1e-12;
-double size = 10.0;
+double size = 1.0;
 int n;
 
 // window
@@ -36,9 +36,10 @@ const int WIDTH = 800;
 const int HEIGHT = 800;
 const char* title;
 
-static const char *fShader = "src/shaders/point.frag";
 static const char *vShader = "src/shaders/point.vert";
+static const char *fShader = "src/shaders/tree.frag";
 std::vector<Shader> shaderList;
+
 void CreateShaders() {
     Shader *shader = new Shader();
     shader->CreateFromFiles(vShader, fShader);
@@ -87,10 +88,21 @@ int main(int argc, char** argv) {
     // window and shaders
     mainWindow = new Window(WIDTH, HEIGHT);
     mainWindow->init(title);
-    Mesh *mesh = new Mesh();
+    
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-size, size, -size, size, -1.0, 1.0);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    Mesh* mesh = new Mesh();
+    Mesh* quadMesh = new Mesh();
     mesh->createMesh(dimension, n);
+    quadMesh->createQuadMesh();
+
     CreateShaders();
-    glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // fondo
     shaderList[0].UseShader();
     GLuint size = shaderList[0].GetSizeLocation();
     glUniform1f(size, 4.0f);
@@ -105,13 +117,19 @@ int main(int argc, char** argv) {
             nbody->simulate_fb(fb);
         } else if (alg == 2) { 
             quadTree->insert(bh);               
+            glUniform4f(glGetUniformLocation(shaderList[0].GetColorLocation(), "color"), 1.0f, 0.0f, 0.0f, 1.0f);
+            glLineWidth(1.0f);
+            quadMesh->renderQuadTree(quadTree->root);
             quadTree->simulate_bh(bh, THETA);
         }
         step++;
 
         Point* temp = alg == 1 ? fb : bh;
+        glUniform4f(glGetUniformLocation(shaderList[0].GetColorLocation(), "color"), 0.9f, 0.9f, 0.9f, 1.0f);
+
         mesh->renderMesh(temp, dimension, n);
         mesh->drawMesh(n);
+
         mainWindow->swapBuffers();
         glfwPollEvents();
     }

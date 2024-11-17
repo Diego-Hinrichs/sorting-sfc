@@ -5,6 +5,7 @@
 struct QuadTreeNode {
 public:
     Quad boundary_;
+    QuadTreeNode* children_[4];
     QuadTreeNode(Quad boundary, int capacity);
     bool insert(Point* points, int point_index);
     void subdivide(Point* points);
@@ -15,7 +16,6 @@ public:
     ~QuadTreeNode();
 
 private:
-    QuadTreeNode* children_[4];
     double total_mass_;
     double center_x_, center_y_;
     bool divided_;

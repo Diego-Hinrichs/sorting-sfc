@@ -1,5 +1,7 @@
 #include "quad.hpp"
+
 #include <iostream>
+
 Quad::Quad(double x, double y, double w, double h)
     : x(x), y(y), w(w), h(h) {}
 

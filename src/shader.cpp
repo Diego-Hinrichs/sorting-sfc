@@ -75,6 +75,7 @@ void Shader::CompileShader(const char* vertexCode, const char* fragmentCode){
     uniformProjection = glGetUniformLocation(shaderID, "projection");
     uniformView = glGetUniformLocation(shaderID, "view");
     uniformPointSize = glGetUniformLocation(shaderID, "size");
+    color = glGetUniformLocation(shaderID, "color");
 };
 
 void Shader::AddShader(GLuint theProgram, const char* shaderCode, GLenum shaderType){
@@ -117,6 +118,10 @@ GLuint Shader::GetViewLocation(){
 
 GLuint Shader::GetSizeLocation(){
     return uniformPointSize;
+};
+
+GLuint Shader::GetColorLocation(){
+    return color;
 };
 
 void Shader::UseShader(){
