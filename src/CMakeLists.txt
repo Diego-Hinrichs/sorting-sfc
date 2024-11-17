@@ -9,6 +9,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     hilbert.cpp
     morton.cpp
     qtnode.cpp
+    utils.cpp
     quad.cpp
     window.cpp
     nbody.cpp

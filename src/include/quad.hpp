@@ -4,11 +4,11 @@
 
 struct Quad {
 public:
-    double x, y;
-    double half_width, half_height;
+    double x, y; // center
+    double w, h; // (x + w, y + h) limits 
 
-    Quad(double x, double y, double half_width, double half_height);
-    bool contains(Point& p);
+    Quad(double x, double y, double w, double h);
+    bool contains(const Point& p);
     Quad get_sub_quad(int quadrant);
 };
 

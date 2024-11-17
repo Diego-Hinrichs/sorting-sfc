@@ -6,25 +6,26 @@
 
 #include "window.hpp"
 #include "mesh.hpp"
+
 #include "qtree.hpp"
 #include "nbody.hpp"
 
 #define EPSILON 1e-4
+bool error_check;
 
-Point* points;
 int dimension = 2;
 unsigned int seed = 12345;
 
 // Barnes-Hut params
 double THETA = 0.0;
-int max_capacity = 1;
 
 // System
-double G = 1e-5;
-double delta_time = 1e-3;
-double softening_factor = 1e-8;
-double half = 10.0; // mitad de tamano incial cuadrante -> half*2 de extremo a extremo
+double G = 1.0;
+double delta_time = 1e-4;
+double softening_factor = 1e-12;
+double size = 20.0;
 int n;
+int max_capacity;
 
 // window
 Window* mainWindow;
@@ -50,72 +51,70 @@ int main(int argc, char** argv) {
     n = std::atoi(argv[1]);
     int k = std::atoi(argv[2]);
     int alg = std::atoi(argv[3]);
+    max_capacity = 1; // only one quadrant
 
-    NBody* nbody;
     QuadTree* quadTree;
-    Quad rootBoundary(0.0, 0.0, half, half);
+    Quad rootBoundarybh(0.0, 0.0, size, size);
+    NBody* nbody = new NBody(n, G, delta_time, softening_factor);
 
-    if (alg == 1) { 
-        points = (Point*)malloc(n * sizeof(Point));
-        initialize_points(points, n, seed);
-        nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
-        title = "Brute Force Simulation";
-
-    } else if (alg == 2) { 
-        points = (Point*)malloc(n * sizeof(Point));
-        initialize_points(points, n, seed);
-        quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundary);
-        title = "Barnes-Hut Simulation";
-
-    } else if (alg > 2) {
-        return debug_mode(n, k, 100);
+    Point* fb = (Point*)malloc(n * sizeof(Point));
+    Point* bh = (Point*)malloc(n * sizeof(Point));
+    initialize_points(fb, n, seed);
+    for (int i = 0; i < n; ++i) {
+        bh[i] = fb[i];
     }
 
-    // !! iniciar window, VAO y VBO
+    if (alg == 1) { 
+        title = "Brute Force Simulation";
+        error_check = false;
+    } else if (alg == 2) { 
+        quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundarybh);
+        title = "Barnes-Hut Simulation";
+        error_check = true;
+    } else if (alg > 2) {
+        debug_mode(n, k, 100);
+        return EXIT_SUCCESS;
+    }
+
+    // Inicializar ventana, VAO y VBO
     mainWindow = new Window(WIDTH, HEIGHT);
     mainWindow->init(title);
     Mesh *mesh = new Mesh();
     mesh->createMesh(dimension, n);
-    
-    // !! temporizador para desacoplar render y simulación
-    auto lastTime = std::chrono::high_resolution_clock::now();
 
     int step = 0;
-    while (!mainWindow->getShouldClose()) {
-        // std::cout << "Step: [" << step << "]" << std::endl;
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<float> elapsed = currentTime - lastTime;
-
-        // !! actualizar la simulación cada cierto tiempo (cada 0.016s para ~60 FPS)
-        if (elapsed.count() > 0.016f) {
-            if (alg == 1) {
-                nbody->simulate_fb(points);
-            } else if (alg == 2) {                
-                quadTree->clear();
-                quadTree->insert(points);
-                quadTree->update_force(points, THETA);
-                quadTree->update_velocity(points);
-                quadTree->update_position(points);
-                quadTree->reset_forces(points);
-            }
-            step++;
-            lastTime = currentTime;
+    while (!mainWindow->getShouldClose() && step < k) {
+        if (alg == 1) {
+            nbody->simulate_fb(fb);
+        } else if (alg == 2) { 
+            quadTree->insert(bh);               
+            quadTree->simulate_bh(bh, THETA);
         }
-
-        // !! render
+        step++;
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        mesh->renderMesh(points, dimension, n); // !! actualizar VBO
-        mesh->drawMesh(n);                      // !! dibujar puntos en VAO
+        Point* temp = alg == 1 ? fb : bh;
+        mesh->renderMesh(temp, dimension, n);
+        mesh->drawMesh(n);
         mainWindow->swapBuffers();
         glfwPollEvents();
     }
+    mesh->~Mesh();
+    mainWindow->~Window();
 
-    mesh->~Mesh(); // !! Borrar los buffers VBO y VAO
+    std::cout << "Simulacion terminada en el paso: " << step << std::endl;
+    if (error_check) {
+        std::cout << "Simulando fuerza bruta.\n";
+        for (int i = 0; i < step; ++i) {
+            nbody->simulate_fb(fb);
+        }
+        std::cout << "Calculando error.\n";
+        calculate_error(fb, bh, n);
+    }
     
-    free(points);
+    delete[] fb;
+    delete[] bh;
     delete nbody;
     delete quadTree;
-    
     return 0;
 }
 
@@ -124,67 +123,55 @@ bool debug_mode(int n, int k, int x) {
     Point* bh = (Point*)malloc(n * sizeof(Point));
 
     initialize_points(fb, n, seed);
-    for(int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {
         bh[i] = fb[i];
     }
 
-    std::cout << "Simulacion iniciada.\n" << std::endl;
+    std::cout << "\nSimulacion iniciada." << std::endl;
     printf("Step: %i. Points: %i.\n", 0, n);
-    std::cout << "Posiciones inciales:\n" << std::endl;
-    print_points(fb, bh, 10);
+    // print_points(fb, bh, n < 10 ? n : 10);
 
-    Quad rootBoundary(0.0, 0.0, half, half);
-    NBody* nbody = new NBody(n, G, delta_time, softening_factor, rootBoundary);
-    QuadTree* quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundary);
+    Quad rootBoundarybh(0.0, 0.0, size, size);
+    max_capacity = 1; // only one quadrant
+
+    NBody* nbody = new NBody(n, G, delta_time, softening_factor);
+    QuadTree* quadTree = new QuadTree(n, G, delta_time, softening_factor, max_capacity, rootBoundarybh);
     
-    // !! FUERZA BRUTA 
-    int step = 0;
-    while(step < k) {
-        // std::cout << "Step: [" << step << "]" << std::endl;
+    // Fuerza Bruta
+    for (int step = 0; step < k; ++step) {
         nbody->simulate_fb(fb);
-        step++;
-    };
-
-    // !! BARNES HUT
-    step = 0;
-    while(step < k) {
-        quadTree->clear();
-        quadTree->insert(bh);
-        quadTree->update_force(bh, THETA);
-        quadTree->update_velocity(bh);
-        quadTree->update_position(bh);
-        quadTree->reset_forces(bh);
-        step++;
     }
 
-    std::cout << "Simulacion terminada.\n" << std::endl;
-    printf("Step: %i. Points: %i.\n", step, n);
-    std::cout << "Posiciones finales:\n" << std::endl;
-    print_points(fb, bh, 10);
-    std::cout << std::endl;
+    // Barnes-Hut
+    for (int step = 0; step < k; ++step) {
+        quadTree->insert(bh);
+        quadTree->simulate_bh(bh, THETA);
+    }
 
-    print_arrays(fb, bh, n, k);
-    
+    std::cout << "\nSimulacion terminada." << std::endl;
+    printf("Step: %i. Points: %i.\n", k-1, n);
+    // print_points(fb, bh, n < 10 ? n : 10);
+
+    // print_arrays(fb, bh, n, k);
+    std::cout << "\nCalculando error." << std::endl;
     calculate_error(fb, bh, n);
 
     free(fb);
     free(bh);
     delete nbody;
-    // delete quadTree;
+    delete quadTree;
     return true;
 }
 
+// TODO: Distribucion uniforme `acotada`
 void initialize_points(Point* points, int n, unsigned int seed) {
-    // Inicializar el generador de números aleatorios con la semilla
     srand(seed);
     for (int i = 0; i < n; ++i) {
         double x = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
         double y = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
-        double z = static_cast<double>(rand()) / RAND_MAX * 2.0 - 1.0;
-        double mass = 1.0;
-        points[i] = Point(x, y, z, mass);
+        points[i] = Point(x, y, 0.0, 1.0);
     }
-};
+}
 
 void print_points(Point* fb, Point* bh, int n) {
     for (int i = 0; i < n; ++i) {
@@ -216,7 +203,6 @@ void print_arrays(Point* fb, Point* bh, int n, int k) {
 }
 
 void calculate_error(Point *fb, Point *bh, int n) {
-    //  !! calcular errores cada x pasos
     double total_error = 0.0;
     #pragma omp parallel for reduction(+:total_error)
     for (int i = 0; i < n; ++i) {
