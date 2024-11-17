@@ -4,7 +4,7 @@ Shader::Shader(){
     shaderID = 0;
     uniformModel = 0;
     uniformProjection = 0;
-    uniformPointSize = 5.0f;
+    uniformPointSize = 0;
 }
 
 void Shader::CreateFromString(const char* vertexCode, const char* fragmentCode){
@@ -54,8 +54,8 @@ void Shader::CompileShader(const char* vertexCode, const char* fragmentCode){
 
     GLint result = 0;
     GLchar eLog[1024] = { 0 };
-    glLinkProgram(shaderID);
 
+    glLinkProgram(shaderID);
     glGetProgramiv(shaderID, GL_LINK_STATUS, &result);
     if(!result){
         glGetProgramInfoLog(shaderID, sizeof(eLog), NULL, eLog);
@@ -63,10 +63,11 @@ void Shader::CompileShader(const char* vertexCode, const char* fragmentCode){
         return;
     }
 
+    glValidateProgram(shaderID);
     glGetProgramiv(shaderID, GL_VALIDATE_STATUS, &result);
     if(!result){
         glGetProgramInfoLog(shaderID, sizeof(eLog), NULL, eLog);
-        printf("Erro validating program: '%s'", eLog);
+        printf("Error validating program: '%s'", eLog);
         return;
     }
 

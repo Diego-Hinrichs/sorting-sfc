@@ -57,6 +57,8 @@ int Window::init(const char* title)
     createCallbacks();
 
     glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    glEnable(GL_POINT_SMOOTH);
     glewExperimental = GL_TRUE;
 
     GLenum error = glewInit();
@@ -72,8 +74,6 @@ int Window::init(const char* title)
 
     glViewport(0, 0, bufferWidth, bufferHeight);
     
-    // TODO: CHANGE THIS
-    glOrtho(-1, 1, -1, 1, -1, 1); // Ajustar la escala para visualizar todos los puntos
     glfwSetWindowUserPointer(mainWindow, this);
 
     return 0; // Agregar retorno cuando todo sea exitoso

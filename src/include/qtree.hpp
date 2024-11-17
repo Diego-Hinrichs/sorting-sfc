@@ -2,6 +2,7 @@
 #define QTREE_H
 #include "qtnode.hpp"
 #include "utils.hpp"
+#include <iostream>
 
 class QuadTree {
 public:
@@ -17,10 +18,6 @@ public:
         root = new QuadTreeNode(boundary, capacity);
     }
 
-    ~QuadTree() {
-        delete root;
-    }
-
     void insert(Point* points) {
         for (int i = 0; i < n; ++i) {
             root->insert(points, i);
@@ -32,6 +29,22 @@ public:
             root->calculate_force_node(points, i, softening_factor, THETA, G);
         }
     }
+    // bypass
+    // void update_force(Point* points, double THETA) {
+    //     if (THETA == 0.0) {
+    //         for (int i = 0; i < n; ++i) {
+    //             for (int j = 0; j < n; ++j) {
+    //                 if (i != j) {
+    //                     points[i].add_force(points[j], softening_factor, G);
+    //                 }
+    //             }
+    //         }
+    //     } else {
+    //         for (int i = 0; i < n; ++i) {
+    //             root->calculate_force_node(points, i, softening_factor, THETA, G);
+    //         }
+    //     }
+    // }
 
     void simulate_bh(Point* points, double THETA){
         reset_forces(points, n);
@@ -42,6 +55,10 @@ public:
 
     void clear() {
         root->clear();
+    }
+    
+    ~QuadTree() {
+        delete root;
     }
 };
 

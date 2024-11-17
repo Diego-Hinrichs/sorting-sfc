@@ -31,7 +31,7 @@ public:
     void update_position(double dt) {
         vx += fx * dt;
         vy += fy * dt;
-        vy += fz * dt;
+        vz += fz * dt;
         x += vx * dt;
         y += vy * dt;
         z += vz * dt;

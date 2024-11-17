@@ -1,10 +1,11 @@
 #ifndef NBODY_H
 #define NBODY_H
 #include "utils.hpp"
+#include "quad.hpp"
 
 struct NBody{
 public:   
-    NBody(int n, double G, double dt, double softening_factor);
+    NBody(int n, double G, double dt, double softening_factor, Quad boundary);
     void update_force(Point *points);
     void simulate_fb(Point *points);
     ~NBody();
@@ -14,6 +15,7 @@ private:
     double G;
     double dt;
     double softening_factor;
+    Quad boundary;
 };
 
 #endif
