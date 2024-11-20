@@ -19,7 +19,8 @@ public:
     }
 
     void insert(Point* points) {
-        for (int i = 0; i < n; ++i) {
+        for (int i = n - 1; i >= 0; --i) {
+        // for (int i = 0; i < n; ++i) {
             root->insert(points, i);
         }
     }
@@ -29,22 +30,10 @@ public:
             root->calculate_force_node(points, i, softening_factor, THETA, G);
         }
     }
-    // bypass
-    // void update_force(Point* points, double THETA) {
-    //     if (THETA == 0.0) {
-    //         for (int i = 0; i < n; ++i) {
-    //             for (int j = 0; j < n; ++j) {
-    //                 if (i != j) {
-    //                     points[i].add_force(points[j], softening_factor, G);
-    //                 }
-    //             }
-    //         }
-    //     } else {
-    //         for (int i = 0; i < n; ++i) {
-    //             root->calculate_force_node(points, i, softening_factor, THETA, G);
-    //         }
-    //     }
-    // }
+
+    void clear() {
+        root->clear();
+    }
 
     void simulate_bh(Point* points, double THETA){
         reset_forces(points, n);
@@ -53,10 +42,6 @@ public:
         clear();
     }
 
-    void clear() {
-        root->clear();
-    }
-    
     ~QuadTree() {
         delete root;
     }

@@ -2,6 +2,8 @@
 #define POINT_H
 #include <cmath>
 
+// float4 (x, y, z, comodin)
+// int idxs []
 struct Point {
 public:
     double x, y, z;     // Posición
@@ -10,6 +12,7 @@ public:
     double mass;        // Masa
 
     // Constructor
+    Point () {}
     Point(double x, double y, double z, double mass)
         : x(x), y(y), z(z), vx(0.0), vy(0.0), vz(0.0), fx(0.0), fy(0.0), fz(0.0), mass(mass) {}
 

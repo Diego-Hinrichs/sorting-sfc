@@ -1,8 +1,9 @@
 #include <cmath>
 #include "nbody.hpp"
 
-NBody::NBody(int n, double G, double dt, double softening_factor, Quad boundary)
-    : n(n), G(G), dt(dt), softening_factor(softening_factor), boundary(boundary) {}
+NBody::NBody(int n, double G, double dt, double softening_factor)
+    : n(n), G(G), dt(dt), softening_factor(softening_factor) {}
+
 
 void NBody::update_force(Point *points){
     for (int i = 0; i < n; ++i) {

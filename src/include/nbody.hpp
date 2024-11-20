@@ -5,7 +5,7 @@
 
 struct NBody{
 public:   
-    NBody(int n, double G, double dt, double softening_factor, Quad boundary);
+    NBody(int n, double G, double dt, double softening_factor);
     void update_force(Point *points);
     void simulate_fb(Point *points);
     ~NBody();
@@ -15,7 +15,6 @@ private:
     double G;
     double dt;
     double softening_factor;
-    Quad boundary;
 };
 
 #endif
