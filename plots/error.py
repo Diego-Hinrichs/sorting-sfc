@@ -6,8 +6,7 @@ steps = []
 errors = []
 with open('error.txt', 'r') as file:
     lines = file.readlines()
-    # Ignorar la primera línea (número de puntos; pasos)
-    for line in lines[1:]:
+    for line in lines:
         step, error = line.strip().split(';')
         steps.append(int(step))
         errors.append(float(error))
